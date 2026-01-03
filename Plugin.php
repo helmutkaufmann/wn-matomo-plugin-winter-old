@@ -1,6 +1,8 @@
 <?php namespace Winter\Matomo;
 
+use Config;
 use System\Classes\PluginBase;
+use Winter\Matomo\Classes\ReportingAPI;
 
 /**
  * Matomo Plugin Information File
@@ -20,6 +22,36 @@ class Plugin extends PluginBase
             'author'      => 'Winter CMS',
             'icon'        => 'icon-area-chart'
         ];
+    }
+
+    public function boot()
+    {
+        $this->app->scoped(ReportingAPI::class, function () {
+            $api = new ReportingAPI(
+                Config::get('winter.matomo::server'),
+                Config::get('winter.matomo::auth_token'),
+                Config::get('winter.matomo::site_id')
+            );
+            $api->setCacheTtl(Config::get('winter.matomo::reportingapi_cache_ttl'));
+            return $api;
+        });
+    }
+    
+    public function render()
+    {
+        try {
+            $this->prepareVars();
+        } catch (Exception $ex) {
+            $this->vars['error'] = $ex->getMessage();
+        }
+        $this->addJs('/plugins/winter/matomo/assets/js/matomo-resizer.js');
+
+        return $this->makePartial('widget');
+    }
+
+    public function prepareVars()
+    {
+        $this->vars['title'] = $this->property('title', 'Matomo Statistics');
     }
 
     /**
